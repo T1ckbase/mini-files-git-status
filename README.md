@@ -29,7 +29,6 @@ A simple Neovim plugin to display git status in mini.files.
 ```lua
 {
   't1ckbase/mini-files-git-status',
-  dependencies = { 'nvim-mini/mini.nvim' }, -- or 'nvim-mini/mini.files'
   config = function()
     require('t1ckbase.mini-files-git-status').setup()
   end,
@@ -42,10 +41,7 @@ A simple Neovim plugin to display git status in mini.files.
 local add, later = MiniDeps.add, MiniDeps.later
 
 later(function()
-  add({
-    source = 't1ckbase/mini-files-git-status',
-    depends = { 'nvim-mini/mini.nvim' }, -- or 'nvim-mini/mini.files'
-  })
+  add('t1ckbase/mini-files-git-status')
 
   require('t1ckbase.mini-files-git-status').setup()
 end)
