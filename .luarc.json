@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sumneko/vscode-lua/master/setting/schema.json",
+  "runtime.version": "LuaJIT",
+  "format": {
+    "enable": true,
+    "defaultConfig": {
+      "quote_style": "single",
+      "max_line_length": "160",
+      "end_of_line": "lf",
+      "align_continuous_assign_statement": "false"
+    }
+  },
+  "workspace": {
+    "library": ["$VIMRUNTIME/lua", "~/AppData/Local/nvim-data/site/pack/deps", "${3rd}/luv/library"],
+    "checkThirdParty": false
+  }
+}
