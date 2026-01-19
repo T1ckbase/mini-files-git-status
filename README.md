@@ -76,6 +76,10 @@ Default config:
   -- Options: 'eol', 'eol_right_align', 'inline', 'overlay', 'right_align'
   virt_text_pos = 'right_align',
 
+  -- Depth of subdirectories to precache (minimum: 1)
+  -- 1 = current directory only, 2 = current + 1 level, etc.
+  precache_depth = 2,
+
   -- Map eza git status to custom icons and highlights
   status_map = {
     -- Example: Hide "Not Modified" status

@@ -1,6 +1,7 @@
 ---@class MiniFilesGitStatus.Config
 ---@field display_mode? 'sign_text'|'virt_text' How to display git status
 ---@field virt_text_pos? 'eol'|'eol_right_align'|'inline'|'overlay'|'right_align' Position for virtual text (when display_mode is 'virt_text')
+---@field precache_depth? integer Depth of subdirectories to precache (default: 2, means current + 1 level)
 ---@field status_map? table<string, {icon: string, hl: string}> Mapping from git XY status to icon and highlight
 ---@field default_highlight? string Default highlight group for git status
 
@@ -10,6 +11,7 @@ local M = {}
 M.config = {
   display_mode = 'sign_text',
   virt_text_pos = 'right_align',
+  precache_depth = 2,
   status_map = {
     -- ['--'] = { icon = '' },
   },
@@ -20,21 +22,38 @@ M.config = {
 local NS = vim.api.nvim_create_namespace('mini_files_git_status')
 
 local EZA_PATTERN = [[^(%S+)%s+['"]?(.-)['"]?$]]
+local DIR_HEADER_PATTERN = [[^%.?[/\\]?(.-):%s*$]]
 
 local cache = {}
 
--- Parse eza output
+-- Parse eza recursive output and update cache
+-- Format: lines are either "STATUS filename" or "path:" (directory header)
 ---@param output string
----@return table<string, string> Map of file names to git status
-local function parse_eza_output(output)
-  local status_map = {}
+---@param base_path string Base path for resolving relative paths
+local function update_cache(output, base_path)
+  base_path = vim.fs.normalize(base_path)
+
+  local current_dir = base_path
   for line in output:gmatch('[^\r\n]+') do
-    local git_status, filename = line:match(EZA_PATTERN)
-    if git_status and filename then
-      status_map[filename] = git_status
+    -- Check if this is a directory header (e.g., ".\lua:" or "./subdir:")
+    local dir_match = line:match(DIR_HEADER_PATTERN)
+    if dir_match then
+      if dir_match == '' or dir_match == '.' then
+        current_dir = base_path
+      else
+        current_dir = vim.fs.normalize(vim.fs.joinpath(base_path, dir_match))
+      end
+    else
+      -- Parse file entry
+      local git_status, filename = line:match(EZA_PATTERN)
+      if git_status and filename then
+        if not cache[current_dir] then
+          cache[current_dir] = {}
+        end
+        cache[current_dir][filename] = git_status
+      end
     end
   end
-  return status_map
 end
 
 -- Map git status to display info
@@ -105,14 +124,31 @@ function M.setup(user_config)
         update_extmarks(buf_id, cache[path])
       end
 
+      local depth = math.max(M.config.precache_depth or 1, 1)
+
       vim.system(
-        { 'eza', '--long', '--color=never', '--icons=never', '--all', '--git', '--no-permissions', '--no-filesize', '--no-user', '--no-time', path },
-        { text = true },
+        {
+          'eza',
+          '--long',
+          '--recurse',
+          '--color=never',
+          '--icons=never',
+          '--all',
+          '--level=' .. depth,
+          '--git',
+          '--no-permissions',
+          '--no-filesize',
+          '--no-user',
+          '--no-time',
+          '.',
+        },
+        { text = true, cwd = path },
         vim.schedule_wrap(function(obj)
           if obj.code == 0 then
-            local status_map = parse_eza_output(obj.stdout)
-            cache[path] = status_map
-            update_extmarks(buf_id, status_map)
+            update_cache(obj.stdout, path)
+            if cache[path] then
+              update_extmarks(buf_id, cache[path])
+            end
           else
             vim.notify('(mini.files-git-status) eza failed: ' .. obj.stderr, vim.log.levels.ERROR)
           end
