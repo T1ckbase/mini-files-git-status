@@ -6,13 +6,8 @@
 
 local M = {}
 
--- Namespace for extmarks
-local NS = vim.api.nvim_create_namespace('mini_files_git_status')
-
-local EZA_PATTERN = [[^(%S+)%s+['"]?(.-)['"]?$]]
-
 -- Default configuration
-local default_config = {
+M.config = {
   display_mode = 'sign_text',
   virt_text_pos = 'right_align',
   status_map = {
@@ -21,8 +16,10 @@ local default_config = {
   default_highlight = 'MiniFilesFile',
 }
 
--- Configuration and cache
-local config = {}
+-- Namespace for extmarks
+local NS = vim.api.nvim_create_namespace('mini_files_git_status')
+
+local EZA_PATTERN = [[^(%S+)%s+['"]?(.-)['"]?$]]
 
 local cache = {}
 
@@ -44,8 +41,8 @@ end
 ---@param status string
 ---@return string|nil icon, string|nil hl_group
 local function map_status(status)
-  local mapped = config.status_map[status] or {}
-  return mapped.icon or status, mapped.hl or config.default_highlight
+  local mapped = M.config.status_map[status] or {}
+  return mapped.icon or status, mapped.hl or M.config.default_highlight
 end
 
 -- Update git status extmarks in a buffer
@@ -72,12 +69,12 @@ local function update_extmarks(buf_id, status_map)
       if icon and icon ~= '' and hl_group then
         local extmark_opts = { priority = 2 }
 
-        if config.display_mode == 'sign_text' then
+        if M.config.display_mode == 'sign_text' then
           extmark_opts.sign_text = icon
           extmark_opts.sign_hl_group = hl_group
-        elseif config.display_mode == 'virt_text' then
+        elseif M.config.display_mode == 'virt_text' then
           extmark_opts.virt_text = { { icon, hl_group } }
-          extmark_opts.virt_text_pos = config.virt_text_pos
+          extmark_opts.virt_text_pos = M.config.virt_text_pos
         end
 
         vim.api.nvim_buf_set_extmark(buf_id, NS, line_num, 0, extmark_opts)
@@ -89,7 +86,7 @@ end
 -- Setup the plugin
 ---@param user_config MiniFilesGitStatus.Config?
 function M.setup(user_config)
-  config = vim.tbl_deep_extend('force', default_config, user_config or {})
+  M.config = vim.tbl_deep_extend('force', M.config, user_config or {})
 
   if vim.fn.executable('eza') == 0 then
     vim.notify('(mini.files-git-status) eza not found', vim.log.levels.ERROR)
