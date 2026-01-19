@@ -94,6 +94,20 @@ Default config:
 
 ## API
 
+### `update_cache(path, callback?)`
+
+Manually update the git status cache for a specific directory.
+
+```lua
+-- Update cache for a directory
+require('t1ckbase.mini-files-git-status').update_cache('/path/to/dir')
+
+-- Update cache with callback
+require('t1ckbase.mini-files-git-status').update_cache('/path/to/dir', function()
+  print('Cache updated!')
+end)
+```
+
 ### `clear_cache(path?)`
 
 Clear the git status cache. Useful after external git operations.

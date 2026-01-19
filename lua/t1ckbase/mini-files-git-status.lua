@@ -31,8 +31,6 @@ local cache = {}
 ---@param output string
 ---@param base_path string Base path for resolving relative paths
 local function update_cache(output, base_path)
-  base_path = vim.fs.normalize(base_path)
-
   local current_dir = base_path
   for line in output:gmatch('[^\r\n]+') do
     -- Check if this is a directory header (e.g., ".\lua:" or "./subdir:")
@@ -102,6 +100,43 @@ local function update_extmarks(buf_id, status_map)
   end
 end
 
+--- Update git status cache for a path
+---@param path string Absolute path to update cache for
+---@param callback? fun() Optional callback when caching is complete
+function M.update_cache(path, callback)
+  local normalized_path = vim.fs.normalize(path)
+  local depth = math.max(M.config.precache_depth or 1, 1)
+
+  vim.system(
+    {
+      'eza',
+      '--long',
+      '--recurse',
+      '--color=never',
+      '--icons=never',
+      '--all',
+      '--level=' .. depth,
+      '--git',
+      '--no-permissions',
+      '--no-filesize',
+      '--no-user',
+      '--no-time',
+      '.',
+    },
+    { text = true, cwd = normalized_path },
+    vim.schedule_wrap(function(obj)
+      if obj.code == 0 then
+        update_cache(obj.stdout, normalized_path)
+        if callback then
+          callback()
+        end
+      else
+        vim.notify('(mini.files-git-status) eza failed: ' .. obj.stderr, vim.log.levels.ERROR)
+      end
+    end)
+  )
+end
+
 -- Setup the plugin
 ---@param user_config MiniFilesGitStatus.Config?
 function M.setup(user_config)
@@ -117,43 +152,20 @@ function M.setup(user_config)
     pattern = 'MiniFilesBufferUpdate',
     callback = function(args)
       local buf_id = args.data.buf_id
-
       local path = vim.api.nvim_buf_get_name(buf_id):gsub('^minifiles://%d+/', '')
+      local stat = vim.uv.fs_stat(path)
+
+      if not stat or stat.type ~= 'directory' then
+        return
+      end
 
       if cache[path] then
         update_extmarks(buf_id, cache[path])
       end
 
-      local depth = math.max(M.config.precache_depth or 1, 1)
-
-      vim.system(
-        {
-          'eza',
-          '--long',
-          '--recurse',
-          '--color=never',
-          '--icons=never',
-          '--all',
-          '--level=' .. depth,
-          '--git',
-          '--no-permissions',
-          '--no-filesize',
-          '--no-user',
-          '--no-time',
-          '.',
-        },
-        { text = true, cwd = path },
-        vim.schedule_wrap(function(obj)
-          if obj.code == 0 then
-            update_cache(obj.stdout, path)
-            if cache[path] then
-              update_extmarks(buf_id, cache[path])
-            end
-          else
-            vim.notify('(mini.files-git-status) eza failed: ' .. obj.stderr, vim.log.levels.ERROR)
-          end
-        end)
-      )
+      M.update_cache(path, function()
+        update_extmarks(buf_id, cache[path])
+      end)
     end,
   })
 end
@@ -162,7 +174,7 @@ end
 ---@param path? string Optional path to clear, clears all if not provided
 function M.clear_cache(path)
   if path then
-    cache[path] = nil
+    cache[vim.fs.normalize(path)] = nil
   else
     cache = {}
   end
