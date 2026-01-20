@@ -102,7 +102,7 @@ end
 
 --- Update git status cache for a path
 ---@param path string Absolute path to update cache for
----@param callback? fun() Optional callback when caching is complete
+---@param callback? fun(obj: vim.SystemCompleted) Optional callback when caching is complete
 function M.update_cache(path, callback)
   local normalized_path = vim.fs.normalize(path)
   local depth = math.max(M.config.precache_depth or 1, 1)
@@ -127,11 +127,11 @@ function M.update_cache(path, callback)
     vim.schedule_wrap(function(obj)
       if obj.code == 0 then
         update_cache(obj.stdout, normalized_path)
-        if callback then
-          callback()
-        end
       else
         vim.notify('(mini.files-git-status) eza failed: ' .. obj.stderr, vim.log.levels.ERROR)
+      end
+      if callback then
+        callback(obj)
       end
     end)
   )
