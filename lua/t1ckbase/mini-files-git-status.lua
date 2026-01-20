@@ -66,7 +66,7 @@ end
 ---@param buf_id integer
 ---@param status_map table<string, string>
 local function update_extmarks(buf_id, status_map)
-  if not vim.api.nvim_buf_is_valid(buf_id) then
+  if not vim.api.nvim_buf_is_valid(buf_id) or not status_map then
     return
   end
 
@@ -159,9 +159,7 @@ function M.setup(user_config)
         return
       end
 
-      if cache[path] then
-        update_extmarks(buf_id, cache[path])
-      end
+      update_extmarks(buf_id, cache[path])
 
       M.update_cache(path, function()
         update_extmarks(buf_id, cache[path])
