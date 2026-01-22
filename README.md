@@ -3,7 +3,6 @@ TODO:
 Add statuscolumn example
 Add neo-tree.nvim icons config example
 Add nvim-tree.lua icons config example
-Add vimdoc
 -->
 
 # mini-files-git-status
@@ -14,7 +13,7 @@ A simple Neovim plugin to display git status in mini.files.
 
 - Display git status icons in mini.files using extmarks (signs or virtual text)
 
-<!-- TODO: Add screenshots -->
+![screenshot](./screenshot.png)
 
 ## Requirements
 
